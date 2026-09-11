@@ -1,19 +1,15 @@
 package io.ejekta.bountiful.bounty.types.builtin
 
-import com.mojang.serialization.JsonOps
 import io.ejekta.bountiful.bounty.types.IBountyObjective
 import io.ejekta.bountiful.components.BountyDataEntry
 import io.ejekta.bountiful.data.PoolEntry
-import io.ejekta.bountiful.util.isJsonSubset
 import io.ejekta.bountiful.util.iterateBountyStacks
 import io.ejekta.kambrik.ext.id
 import net.minecraft.ChatFormatting
 import net.minecraft.core.registries.BuiltInRegistries
-import net.minecraft.nbt.CompoundTag
-import net.minecraft.nbt.NbtOps
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.MutableComponent
-import net.minecraft.resources.Identifier
+import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.EntityType
@@ -23,11 +19,11 @@ import net.minecraft.world.entity.player.Player
 
 class BountyTypeEntity : IBountyObjective {
 
-    override val id: Identifier = Identifier.parse("entity")
+    override val id: ResourceLocation = ResourceLocation.parse("entity")
 
     override fun isValid(entry: PoolEntry, server: MinecraftServer): Boolean {
-        val id = getEntityType(Identifier.parse(entry.content)).id
-        return id == Identifier.parse(entry.content)
+        val id = getEntityType(ResourceLocation.parse(entry.content)).id
+        return id == ResourceLocation.parse(entry.content)
     }
 
     override fun textOnBounty(entry: BountyDataEntry, isObj: Boolean, player: Player, current: Int): List<MutableComponent> {
@@ -53,20 +49,13 @@ class BountyTypeEntity : IBountyObjective {
             return
         }
         playerEntity.iterateBountyStacks {
-            val entityObjs = objs.filter { it.logic?.id == this@BountyTypeEntity.id }
+            val entityObjs = objs.filter { it.logic.id == this@BountyTypeEntity.id }
             if (entityObjs.isNotEmpty()) {
                 var changes = false
                 for (obj in entityObjs) {
                     if (obj.content == killedEntity.type.id.toString()) {
-                        val nbtMatches = obj.data?.let { reqData ->
-                            val entityNbt = CompoundTag().also { killedEntity.saveWithoutId(it) }
-                            val entityJson = NbtOps.INSTANCE.convertTo(JsonOps.INSTANCE, entityNbt).asJsonObject
-                            isJsonSubset(reqData, entityJson)
-                        } ?: true
-                        if (nbtMatches) {
-                            advance(obj)
-                            changes = true
-                        }
+                        advance(obj)
+                        changes = true
                     }
                 }
                 if (changes) {
@@ -79,12 +68,11 @@ class BountyTypeEntity : IBountyObjective {
 
     companion object {
         fun getEntityType(entry: BountyDataEntry): EntityType<*> {
-            return getEntityType(Identifier.parse(entry.content))
+            return getEntityType(ResourceLocation.parse(entry.content))
         }
 
-        fun getEntityType(id: Identifier): EntityType<*> {
-            return BuiltInRegistries.ENTITY_TYPE.getOptional(id).orElse(null)
-                ?: throw IllegalArgumentException("Unknown entity type: $id")
+        fun getEntityType(id: ResourceLocation): EntityType<*> {
+            return BuiltInRegistries.ENTITY_TYPE.getValue(id)
         }
     }
 

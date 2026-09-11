@@ -1,40 +1,39 @@
 plugins {
-    id("multiloader-common-module")
-}
-
-sourceSets {
-    create("gametest") {
-        java.srcDir("src/gametest/java")
-        resources.srcDir("src/gametest/resources")
-        compileClasspath += sourceSets["main"].output + sourceSets["main"].compileClasspath + sourceSets["main"].runtimeClasspath + configurations["testCompileClasspath"]
-        runtimeClasspath += output + compileClasspath + sourceSets["main"].runtimeClasspath
-    }
-}
-
-configurations {
-    named("gametestCompileOnly") {
-        extendsFrom(configurations["compileOnly"])
-    }
-    named("gametestImplementation") {
-        extendsFrom(configurations["implementation"])
-        extendsFrom(configurations["testImplementation"])
-    }
-    named("gametestRuntimeOnly") {
-        extendsFrom(configurations["runtimeOnly"])
-        extendsFrom(configurations["testRuntimeOnly"])
-    }
-}
-
-repositories {
-    maven {
-        name = "Architectury Maven"
-        url = uri("https://maven.architectury.dev/")
-    }
-    mavenLocal()
+    id("multiloader-common")
+    kotlin("jvm") version "2.0.21"
 }
 
 dependencies {
-    implementation("io.ejekta.kambrik:kambrik-common-${project.property("minecraft_version")}:${project.property("kambrik_version")}")
-    implementation("io.ejekta.percale:percale-common-${project.property("minecraft_version")}:${project.property("percale_version")}")
-    testImplementation(kotlin("test"))
+    compileOnly("org.spongepowered:mixin:0.8.5")
+    compileOnly("io.github.llamalad7:mixinextras-common:0.3.5")
+    annotationProcessor("io.github.llamalad7:mixinextras-common:0.3.5")
+
+    implementation(kotlin("reflect"))
+}
+
+tasks.named("compileKotlin") {
+    enabled = false
+}
+tasks.named("compileJava") {
+    enabled = false
+}
+
+tasks.test {
+    useJUnitPlatform()
+}
+
+configurations {
+    create("commonJava") {
+        isCanBeResolved = false
+        isCanBeConsumed = true
+    }
+    create("commonResources") {
+        isCanBeResolved = false
+        isCanBeConsumed = true
+    }
+}
+
+artifacts {
+    add("commonJava", sourceSets["main"].java.sourceDirectories.singleFile)
+    add("commonResources", sourceSets["main"].resources.sourceDirectories.singleFile)
 }

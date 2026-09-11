@@ -9,10 +9,8 @@ import io.ejekta.bountiful.content.board.BoardBlock
 import io.ejekta.bountiful.content.board.BoardBlockEntity
 import io.ejekta.bountiful.content.gui.AnalyzerScreenHandler
 import io.ejekta.bountiful.content.gui.BoardScreenHandler
-import io.ejekta.bountiful.content.gui.EditorScreenHandler
 import io.ejekta.bountiful.content.item.BountyItem
 import io.ejekta.bountiful.content.item.DecreeItem
-import io.ejekta.bountiful.data.BountyModifier
 import io.ejekta.bountiful.data.Decree
 import io.ejekta.bountiful.data.Pool
 import io.ejekta.bountiful.data.PoolEntry
@@ -28,21 +26,18 @@ import net.minecraft.stats.StatFormatter
 import net.minecraft.world.entity.ai.memory.MemoryModuleType
 import net.minecraft.world.entity.ai.village.poi.PoiType
 import net.minecraft.world.entity.ai.village.poi.PoiTypes
+import net.minecraft.world.entity.npc.Villager
 import net.minecraft.world.item.BlockItem
 import net.minecraft.world.item.Item
 import net.minecraft.world.level.block.state.BlockState
 import java.util.*
+import java.util.function.BiPredicate
 
 object BountifulContent : KambrikAutoRegistrar {
 
     override fun getId() = "bountiful"
 
     val Decrees = mutableListOf<Decree>()
-
-    val Modifiers = mutableListOf<BountyModifier>()
-
-    var ModifierMap = mapOf<String, BountyModifier>()
-        private set
 
     var Pools = listOf<Pool>()
         private set
@@ -59,34 +54,25 @@ object BountifulContent : KambrikAutoRegistrar {
         PoolEntryMap = Pools.map { it.items }.flatten().associateBy { it.id }
     }
 
-    fun populateModifiers(newModifiers: List<BountyModifier>) {
-        Modifiers.clear()
-        Modifiers.addAll(newModifiers)
-        ModifierMap = Modifiers.associateBy { it.id }
-    }
-
     fun getDecrees(ids: Set<String>): Set<Decree> {
         return ids.mapNotNull { id ->
             Decrees.find { it.id == id }
         }.toSet()
     }
 
-    val BOUNTY_ITEM by "bounty" forItem { props -> BountyItem(props) }
+    val BOUNTY_ITEM by "bounty" forItem { BountyItem(Item.Properties().setId(ResourceKey.create(Registries.ITEM, Bountiful.id("bounty"))).stacksTo(1).fireResistant()) }
 
-    val DECREE_ITEM by "decree" forItem { props -> DecreeItem(props) }
+    val DECREE_ITEM by "decree" forItem { DecreeItem(Item.Properties().setId(ResourceKey.create(Registries.ITEM, Bountiful.id("decree"))).stacksTo(1).fireResistant()) }
 
-    val BOARD = "bountyboard" forBlock { props -> BoardBlock(props) }
+    val BOARD = "bountyboard" forBlock { BoardBlock() }
 
-    val BOARD_ITEM by "bountyboard" forItem { props ->
-        BlockItem(BOARD.value, props.stacksTo(1).fireResistant())
-    }
+    val BOARD_ITEM by "bountyboard" forItem { BlockItem(BOARD.value, Item.Properties().setId(ResourceKey.create(Registries.ITEM, Bountiful.id("bountyboard"))).useBlockDescriptionPrefix().stacksTo(1).fireResistant()) }
 
     val BOARD_ENTITY by "board-be".forBlockEntity(BOARD, ::BoardBlockEntity)
 
     val BOARD_SCREEN_HANDLER by "board" forScreen ::BoardScreenHandler
 
     val ANALYZER_SCREEN_HANDLER by "analyzer" forScreen ::AnalyzerScreenHandler
-    val EDITOR_SCREEN_HANDLER by "editor" forScreen ::EditorScreenHandler
 
     val MEM_MODULE_NEAREST_BOARD_INSTANCE = "nearest_bounty_board".forRegistration(
         BuiltInRegistries.MEMORY_MODULE_TYPE
@@ -94,7 +80,7 @@ object BountifulContent : KambrikAutoRegistrar {
 
     val MEM_MODULE_NEAREST_BOARD by MEM_MODULE_NEAREST_BOARD_INSTANCE
 
-    val POI_BOUNTY_BOARD = "bountyboard".forVillagerPoi(setOf(BOARD.value.defaultState), 1, 1)
+    //val POI_BOUNTY_BOARD = "bountyboard".forVillagerPoi(MEM_MODULE_NEAREST_BOARD_INSTANCE, setOf(BOARD.value.defaultState), 1, 1)
 
     val BOUNTY_INFO by "bounty_info".forComponent(BountyInfo.serializer())
     val BOUNTY_PING by "bounty_ping".forComponent(Boolean.serializer())
@@ -126,10 +112,19 @@ object BountifulContent : KambrikAutoRegistrar {
         Triggers
     }
 
-    private fun String.forVillagerPoi(stateSet: Set<BlockState>, tickets: Int, searchDistance: Int): ResourceKey<PoiType> {
+    private fun String.forVillagerPoi(memModule: Lazy<MemoryModuleType<GlobalPos>>, stateSet: Set<BlockState>, tickets: Int, searchDistance: Int): ResourceKey<PoiType>? {
         val registryKey = ResourceKey.create(Registries.POINT_OF_INTEREST_TYPE, Bountiful.id(this))
+        val poiMap = Villager.POI_MEMORIES.toMutableMap()
+        val bio: BiPredicate<Villager, Holder<PoiType>> = BiPredicate { vill, poiType ->
+            poiType.`is`(registryKey)
+        }
+        poiMap[memModule.value] = bio
+        // The following two lines need an AW/AT
+        Villager.POI_MEMORIES = poiMap
         PoiTypes.register(BuiltInRegistries.POINT_OF_INTEREST_TYPE, registryKey, stateSet, tickets, searchDistance)
         return registryKey
     }
+//
+//    private fun String.forSimplePoi(memModule: Lazy<MemoryModuleType<GlobalPos>>)
 
 }

@@ -11,8 +11,8 @@ import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityCombatEvents
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents
-import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents
-import net.fabricmc.fabric.api.object.builder.v1.trade.TradeOfferHelper
+import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents
+import net.fabricmc.fabric.api.`object`.builder.v1.trade.TradeOfferHelper
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper
 import net.fabricmc.fabric.api.resource.ResourcePackActivationType
 import net.fabricmc.loader.api.FabricLoader
@@ -74,18 +74,24 @@ class BountifulModFabric : ModInitializer {
         })
 
         // Increment entity bounties for all players within 12 blocks of the player and all players within 12 blocks of the mob
-        ServerEntityCombatEvents.AFTER_KILLED_OTHER_ENTITY.register(ServerEntityCombatEvents.AfterKilledOtherEntity { world, entity, killedEntity, damageSource ->
+        ServerEntityCombatEvents.AFTER_KILLED_OTHER_ENTITY.register(ServerEntityCombatEvents.AfterKilledOtherEntity { world, entity, killedEntity ->
             Bountybridge.handleEntityKills(world, entity, killedEntity)
         })
 
-        TradeOfferHelper.registerWanderingTraderOffers(1) { factories ->
-            factories.add { entity, random -> DecreeTradeFactory.createOffer(entity, random) }
+        TradeOfferHelper.registerWanderingTraderOffers(1) {
+            Bountybridge.modifyTradeList(it)
+        }
+
+        TradeOfferHelper.registerRebalancedWanderingTraderOffers {
+            it.pool(
+                Bountiful.id("merchant_trade_offers"), 1, DecreeTradeFactory()
+            )
         }
 
         for ((group, items) in Bountybridge.getItemGroups()) {
-            CreativeModeTabEvents.modifyOutputEvent(group).register(CreativeModeTabEvents.ModifyOutput { output ->
+            ItemGroupEvents.modifyEntriesEvent(group).register(ItemGroupEvents.ModifyEntries {
                 for (item in items) {
-                    output.accept(item())
+                    it.accept(item)
                 }
             })
         }

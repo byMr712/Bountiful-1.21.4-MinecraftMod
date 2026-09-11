@@ -1,33 +1,38 @@
 plugins {
-    id("multiloader-root")
+    id("fabric-loom") version "1.10-SNAPSHOT" apply false
+    // see https://projects.neoforged.net/neoforged/moddevgradle for new versions
+    id("net.neoforged.moddev") version "0.1.110" apply false
+    kotlin("jvm") version "2.0.21"
+    kotlin("plugin.serialization") version "2.0.21"
 }
 
-val bundleMods by tasks.registering(Sync::class) {
-    group = "build"
-    description = "Builds and collects Fabric and NeoForge jars for Bountiful, Kambrik, and Percale into build/bundle/mods."
-
-    val bountifulVersion = providers.gradleProperty("version")
-    val kambrikVersion = providers.gradleProperty("kambrik_version")
-    val percaleVersion = providers.gradleProperty("percale_version")
-
-    dependsOn(":fabric:build", ":neoforge:build")
-    dependsOn(gradle.includedBuild("Kambrik").task(":fabric:build"))
-    dependsOn(gradle.includedBuild("Kambrik").task(":neoforge:build"))
-
-    into(layout.buildDirectory.dir("bundle/mods"))
-
-    from(layout.projectDirectory.file("fabric/build/libs/bountiful-fabric-${bountifulVersion.get()}.jar"))
-    from(layout.projectDirectory.file("neoforge/build/libs/bountiful-neoforge-${bountifulVersion.get()}.jar"))
-    from(layout.projectDirectory.file("../Kambrik/fabric/build/libs/kambrik-fabric-${kambrikVersion.get()}.jar"))
-    from(layout.projectDirectory.file("../Kambrik/neoforge/build/libs/kambrik-neoforge-${kambrikVersion.get()}.jar"))
-
-    // Percale is optional here: include existing jars without forcing its build to succeed.
-    from(layout.projectDirectory.file("../Percale/fabric/build/libs/percale-fabric-${percaleVersion.get()}.jar"))
-    from(layout.projectDirectory.file("../Percale/neoforge/build/libs/percale-neoforge-${percaleVersion.get()}.jar"))
+repositories {
+    mavenCentral()
 }
 
-tasks.register("bundle") {
-    group = "build"
-    description = "Alias for bundleMods."
-    dependsOn(bundleMods)
+
+subprojects {
+    plugins.apply("org.jetbrains.kotlin.jvm")
+    plugins.apply("org.jetbrains.kotlin.plugin.serialization")
+
+    dependencies {
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+        implementation(kotlin("reflect"))
+    }
+
+    // Loader specific
+    if (path != ":common") {
+        tasks.withType<JavaCompile> {
+            source(project(":common").sourceSets.main.get().allSource)
+        }
+
+        // For now, just skip javadoc
+        tasks.withType<Javadoc>().all {
+            enabled = false
+        }
+
+        tasks.withType<ProcessResources> {
+            from(project(":common").sourceSets.main.get().resources)
+        }
+    }
 }

@@ -1,26 +1,14 @@
 plugins {
-    id 'multiloader-neoforge'
-}
-
-sourceSets {
-    gametest {
-        java.srcDir('src/gametest/java')
-        resources.srcDir('src/gametest/resources')
-        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath + sourceSets.main.runtimeClasspath + configurations.testCompileClasspath
-        runtimeClasspath += output + compileClasspath + sourceSets.main.runtimeClasspath
-    }
-}
-
-configurations {
-    gametestCompileOnly.extendsFrom(compileOnly)
-    gametestImplementation.extendsFrom(implementation)
-    gametestImplementation.extendsFrom(testImplementation)
-    gametestRuntimeOnly.extendsFrom(runtimeOnly)
-    gametestRuntimeOnly.extendsFrom(testRuntimeOnly)
+    id 'multiloader-loader'
+    id 'net.neoforged.moddev'
 }
 
 repositories {
     mavenLocal()
+    maven {
+        name = 'Kotlin for Forge'
+        url = 'https://thedarkcolour.github.io/KotlinForForge/'
+    }
     maven {
         name = "Architectury Maven"
         url = uri("https://maven.architectury.dev/")
@@ -28,37 +16,37 @@ repositories {
 }
 
 dependencies {
-    implementation("io.ejekta.kambrik:kambrik-neoforge-${minecraft_version}:${kambrik_version}")
-    implementation("io.ejekta.percale:percale-neoforge-${minecraft_version}:${percale_version}")
-    compileOnly("me.shedaniel.cloth:cloth-config-neoforge:${cloth_config_version}")
-    runtimeOnly("me.shedaniel.cloth:cloth-config-neoforge:${cloth_config_version}")
+    implementation("thedarkcolour:kotlinforforge-neoforge:${forgelike_adapter_version}")
+    implementation("io.ejekta.kambrik:kambrik-neoforge:${kambrik_version}")
+    implementation("io.ejekta.percale:percale-neoforge:${percale_version}")
+    implementation("me.shedaniel.cloth:cloth-config-neoforge:${cloth_config_version}")
 }
 
 neoForge {
-    mods {
-        "${mod_id}" {
-            sourceSet sourceSets.gametest
-        }
+    version = neoforge_version
+    // Automatically enable neoforge AccessTransformers if the file exists
+    def at = project(':common').file('src/main/resources/META-INF/accesstransformer.cfg')
+    if (at.exists()) {
+        accessTransformers.add(at.absolutePath)
+    }
+    parchment {
+        minecraftVersion = parchment_minecraft
+        mappingsVersion = parchment_version
     }
     runs {
-        gameTestServer {
-            type = "gameTestServer"
-            gameDirectory = project.layout.projectDirectory.dir('runs/gametest')
+        configureEach {
             systemProperty('neoforge.enabledGameTestNamespaces', mod_id)
-            ideName = "NeoForge GameTest Server (${project.path})"
+            ideName = "NeoForge ${it.name.capitalize()} (${project.path})" // Unify the run config names with fabric
+        }
+        client { client() }
+        data { data() }
+        server { server() }
+    }
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
         }
     }
 }
 
-tasks.named('compileGametestKotlin') {
-    source(project(':common').fileTree('src/gametest/java'))
-}
-
-tasks.named('processGametestResources') {
-    from(project(':common').file('src/gametest/resources'))
-    duplicatesStrategy = DuplicatesStrategy.WARN
-}
-
-tasks.named('runGameTestServer') {
-    dependsOn(tasks.named('gametestClasses'))
-}
+sourceSets.main.resources { srcDir 'src/generated/resources' }

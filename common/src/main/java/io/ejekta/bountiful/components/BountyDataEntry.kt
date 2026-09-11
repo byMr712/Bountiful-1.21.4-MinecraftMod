@@ -3,14 +3,18 @@ package io.ejekta.bountiful.components
 import com.google.gson.JsonPrimitive
 import io.ejekta.bountiful.bounty.BountyRarity
 import io.ejekta.bountiful.bounty.types.BountyTypeRegistry
+import io.ejekta.bountiful.bounty.types.IBountyReward
 import io.ejekta.bountiful.bounty.types.IBountyType
+import io.ejekta.bountiful.bounty.types.builtin.BountyTypeCommand
 import io.ejekta.bountiful.content.BountifulContent
+import io.ejekta.bountiful.data.Decree
 import kotlinx.serialization.Contextual
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import net.minecraft.ChatFormatting
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.MutableComponent
-import net.minecraft.resources.Identifier
+import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.entity.player.Player
 
 typealias GsonObject = com.google.gson.JsonObject
@@ -30,7 +34,7 @@ data class BountyDataEntry(
 ) {
 
     // Icon is local (to the client) rather than stored in items for net performance
-    val icon: Identifier? by lazy {
+    val icon: ResourceLocation? by lazy {
         BountifulContent.PoolEntryMap[id]?.icon
     }
 
@@ -41,17 +45,16 @@ data class BountyDataEntry(
 
     val isMystery: Boolean = false
 
-    val logic: IBountyType?
-        get() = BountyTypeRegistry.getOptional(Identifier.parse(logicName)).orElse(null)
+    val logic: IBountyType = BountyTypeRegistry.getValue(ResourceLocation.parse(logicName))!!
+
+    private fun getRelatedDecrees(): Set<Decree> {
+        return emptySet()
+        // TODO grab based on id
+        //return BountifulContent.getDecrees(relatedDecreeIds)
+    }
 
     fun getRelatedProfessions(): Set<String> {
-        val poolId = id.substringBefore(".")
-        return BountifulContent.Pools
-            .find { it.id == poolId }
-            ?.usedInDecrees
-            ?.flatMap { it.linkedProfessions }
-            ?.toSet()
-            ?: emptySet()
+        return getRelatedDecrees().map { it.linkedProfessions }.flatten().toSet()
     }
 
     fun contentToTranslationKey(): String {
@@ -73,7 +76,7 @@ data class BountyDataEntry(
     }
 
     fun textOnBoardSidebar(player: Player): List<Component> {
-        return logic?.textOnBoardSidebar(this, player) ?: emptyList()
+        return logic.textOnBoardSidebar(this, player)
     }
 
     fun textOnBounty(player: Player, isObj: Boolean, current: Int): List<MutableComponent> {
@@ -81,7 +84,7 @@ data class BountyDataEntry(
             true -> listOf( Component.literal("???").withStyle(ChatFormatting.BOLD).append(
                 Component.literal("x$amount").withStyle(rarity.color)
             ) )
-            false -> logic?.textOnBounty(this, isObj, player, current) ?: emptyList()
+            false -> logic.textOnBounty(this, isObj, player, current)
         }
     }
 

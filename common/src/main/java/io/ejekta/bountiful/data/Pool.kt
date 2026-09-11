@@ -21,7 +21,7 @@ data class Pool(
     val currency: Boolean = false
 ) : IMerge<Pool> {
 
-    @Transient val items: MutableList<PoolEntry> = mutableListOf()
+    val items: MutableList<PoolEntry> = mutableListOf()
 
     fun setup(newId: String) {
         id = newId

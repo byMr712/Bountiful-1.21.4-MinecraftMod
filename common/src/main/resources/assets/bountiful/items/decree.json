@@ -3,6 +3,7 @@
     "type": "minecraft:condition",
     "property": "minecraft:has_component",
     "component": "bountiful:decree_data",
+    "ignore_default": true,
     "on_true": {
       "type": "minecraft:model",
       "model": "bountiful:item/decree-known"

@@ -67,7 +67,7 @@ class BountyStack(val stack: ItemStack) {
 
     private fun hasFinishedObjectives(player: Player): Boolean {
         return objs.all {
-            (it.logic as? IBountyObjective)?.getProgress(it, player, progressOf(it))?.isComplete() == true
+            (it.logic as IBountyObjective).getProgress(it, player, progressOf(it)).isComplete()
         }
     }
 
@@ -78,7 +78,9 @@ class BountyStack(val stack: ItemStack) {
     }
 
     private fun isDone(player: Player): Boolean {
-        return hasFinishedObjectives(player) && info.timeLeftTicks(player.level()) > 0
+        return objs.all {
+            (it.logic as? IBountyObjective)?.getProgress(it, player, progressOf(it))?.isComplete() == true
+        } && ((info.timeLeftTicks(player.level())) > 0)
     }
 
     // Rewards
@@ -90,7 +92,7 @@ class BountyStack(val stack: ItemStack) {
         player.giveExperiencePoints(rews.sumOf { (it.rarity.ordinal) * 2 + 1 })
 
         for (reward in rews) {
-            (reward.logic as? IBountyReward)?.giveReward(reward, player)
+            (reward.logic as IBountyReward).giveReward(reward, player)
         }
     }
 
@@ -98,7 +100,7 @@ class BountyStack(val stack: ItemStack) {
 
     fun tryCashIn(player: Player): Boolean {
         if (info.timeLeftTicks(player.level()) <= 0) {
-            player.sendSystemMessage(Component.translatable("bountiful.bounty.expired"))
+            player.displayClientMessage(Component.translatable("bountiful.bounty.expired"), false)
             return false
         }
         return if (hasFinishedObjectives(player)) {
@@ -106,7 +108,7 @@ class BountyStack(val stack: ItemStack) {
             rewardPlayer(player)
             true
         } else {
-            player.sendSystemMessage(Component.translatable("bountiful.tooltip.requirements"))
+            player.displayClientMessage(Component.translatable("bountiful.tooltip.requirements"), false)
             false
         }
     }

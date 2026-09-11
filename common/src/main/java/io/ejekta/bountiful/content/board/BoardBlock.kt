@@ -25,15 +25,22 @@ import net.minecraft.world.level.block.entity.BlockEntity
 import net.minecraft.world.level.block.entity.BlockEntityTicker
 import net.minecraft.world.level.block.entity.BlockEntityType
 import net.minecraft.world.level.block.state.BlockState
-import net.minecraft.world.level.storage.TagValueInput
 import net.minecraft.world.level.storage.loot.LootParams
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams
+import net.minecraft.core.registries.Registries
+import net.minecraft.resources.ResourceKey
+import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.phys.BlockHitResult
-import net.minecraft.util.ProblemReporter
 
 
-class BoardBlock(props: Properties) : BaseEntityBlock(
-    props.sound(SoundType.WOOD).destroyTime(3f).explosionResistance(3600000f)
+class BoardBlock(
+    properties: Properties = Properties.of()
+        .setId(ResourceKey.create(Registries.BLOCK, ResourceLocation.parse("bountiful:bountyboard")))
+        .sound(SoundType.WOOD)
+        .destroyTime(3f)
+        .explosionResistance(3600000f)
+) : BaseEntityBlock(
+    properties
 ), EntityBlock {
 
     override fun getRenderShape(state: BlockState): RenderShape {
@@ -42,7 +49,7 @@ class BoardBlock(props: Properties) : BaseEntityBlock(
 
     override fun <T : BlockEntity> getTicker(
         level: Level,
-        state: BlockState,
+        state: BlockState?,
         type: BlockEntityType<T>
     ): BlockEntityTicker<T>? {
         return boardTicker(level, type, BountifulContent.BOARD_ENTITY)
@@ -54,7 +61,7 @@ class BoardBlock(props: Properties) : BaseEntityBlock(
             return mutableListOf(ItemStack(BountifulContent.BOARD_ITEM).let {
                 if (it.item == BountifulContent.BOARD_ITEM) {
                     it.apply {
-                        val regAcc = blockEntity.level?.registryAccess() ?: return@apply
+                        val regAcc = blockEntity.level?.registryAccess()
                         this.set(DataComponents.CUSTOM_DATA, CustomData.of(blockEntity.saveCustomOnly(regAcc)))
                     }
                 } else {
@@ -66,20 +73,19 @@ class BoardBlock(props: Properties) : BaseEntityBlock(
     }
 
     override fun setPlacedBy(
-        world: Level,
-        pos: BlockPos,
-        state: BlockState,
+        world: Level?,
+        pos: BlockPos?,
+        state: BlockState?,
         placer: LivingEntity?,
-        itemStack: ItemStack
+        itemStack: ItemStack?
     ) {
         super.setPlacedBy(world, pos, state, placer, itemStack)
-        if (!world.isClientSide) {
+        if (world != null && pos != null && itemStack != null && !world.isClientSide) {
             val blockEntity = world.getBlockEntity(pos, BountifulContent.BOARD_ENTITY)
             blockEntity.ifPresent {
                 val oldTag = itemStack.get(DataComponents.CUSTOM_DATA)?.copyTag()
                 oldTag?.let { old ->
-                    val input = TagValueInput.create(ProblemReporter.DISCARDING, world.registryAccess(), old)
-                    it.loadCustomOnly(input)
+                    it.loadCustomOnly(old, world.registryAccess())
                     it.setChanged()
                 }
             }
@@ -88,10 +94,10 @@ class BoardBlock(props: Properties) : BaseEntityBlock(
 
     // Refuse to break the block if the config disallows it
     override fun getDestroyProgress(
-        state: BlockState,
-        player: Player,
-        world: BlockGetter,
-        pos: BlockPos
+        state: BlockState?,
+        player: Player?,
+        world: BlockGetter?,
+        pos: BlockPos?
     ): Float {
         return if (BountifulIO.configData.board.canBreak) {
             super.getDestroyProgress(state, player, world, pos)
@@ -101,7 +107,7 @@ class BoardBlock(props: Properties) : BaseEntityBlock(
     }
 
     override fun codec(): MapCodec<out BaseEntityBlock> {
-        return simpleCodec(::BoardBlock)
+        return simpleCodec { _ -> BoardBlock() }
     }
 
     override fun useItemOn(
@@ -113,37 +119,30 @@ class BoardBlock(props: Properties) : BaseEntityBlock(
         hand: InteractionHand,
         hit: BlockHitResult
     ): InteractionResult {
-        if (player.isShiftKeyDown) {
-            return InteractionResult.PASS
-        }
-        val holding = player.getItemInHand(hand)
+        (player as? ServerPlayer)?.let {
+            if (!it.isShiftKeyDown) {
+                val holding = it.getItemInHand(hand)
 
-        if (holding.item is BountyItem) {
-            if (world.isClientSide) {
-                return InteractionResult.SUCCESS
-            }
-            val serverPlayer = player as? ServerPlayer ?: return InteractionResult.FAIL
-            val boardEntity = serverPlayer.level().getBlockEntity(pos) as? BoardBlockEntity ?: return InteractionResult.FAIL
-            val success = (holding.item as BountyItem).tryCashIn(serverPlayer, holding)
-            if (success) {
-                boardEntity.updateUponBountyCompletion(serverPlayer, BountyStack(holding))
-                holding.shrink(holding.maxStackSize) // delete bounty only after updating completion
-                boardEntity.setChanged()
-                return InteractionResult.CONSUME
-            }
-            return InteractionResult.SUCCESS
-        } else {
-            if (world.isClientSide) {
-                return InteractionResult.SUCCESS
-            }
-            val serverPlayer = player as? ServerPlayer ?: return InteractionResult.FAIL
-            val menu = state.getMenuProvider(world, pos)
-            if (menu != null) {
-                serverPlayer.openMenu(menu)
-                return InteractionResult.CONSUME
+                if (holding.item is BountyItem) {
+                    val boardEntity = it.level().getBlockEntity(pos) as? BoardBlockEntity ?: return InteractionResult.FAIL
+                    val success = (holding.item as BountyItem).tryCashIn(it, holding)
+                    if (success) {
+                        boardEntity.updateUponBountyCompletion(it, BountyStack(holding))
+                        holding.shrink(holding.maxStackSize) // delete bounty only after updating completion
+                        boardEntity.setChanged()
+                        return InteractionResult.CONSUME
+                    }
+                } else {
+                    val menu = state.getMenuProvider(world, pos)
+
+                    if (menu != null) {
+                        it.openMenu(menu)
+                        return InteractionResult.SUCCESS
+                    }
+                }
             }
         }
-        return InteractionResult.PASS
+        return InteractionResult.SUCCESS
     }
 
     override fun newBlockEntity(pos: BlockPos, state: BlockState): BlockEntity {
@@ -153,10 +152,10 @@ class BoardBlock(props: Properties) : BaseEntityBlock(
     companion object {
         const val BOUNTY_SIZE = 24
 
-        private fun <T : BlockEntity> boardTicker(
+        private fun <T : BlockEntity?> boardTicker(
             level: Level,
-            givenType: BlockEntityType<T>,
-            expectedType: BlockEntityType<BoardBlockEntity>
+            givenType: BlockEntityType<T>?,
+            expectedType: BlockEntityType<out BoardBlockEntity?>?
         ): BlockEntityTicker<T>? {
             //return world.isClient ? null : AbstractFurnaceBlock.validateTicker(givenType, expectedType, AbstractFurnaceBlockEntity::tick);
             return if (level.isClientSide) {

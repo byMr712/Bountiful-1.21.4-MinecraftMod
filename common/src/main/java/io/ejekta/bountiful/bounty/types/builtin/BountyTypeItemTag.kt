@@ -1,6 +1,6 @@
 package io.ejekta.bountiful.bounty.types.builtin
 
-import io.ejekta.bountiful.bounty.types.IBountyExchangeable
+import io.ejekta.bountiful.bounty.types.IBountyObjective
 import io.ejekta.bountiful.bounty.types.Progress
 import io.ejekta.bountiful.components.BountyDataEntry
 import io.ejekta.bountiful.data.PoolEntry
@@ -11,30 +11,29 @@ import net.minecraft.ChatFormatting
 import net.minecraft.core.registries.Registries
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.MutableComponent
-import net.minecraft.resources.Identifier
+import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.MinecraftServer
 import net.minecraft.tags.TagKey
-import net.minecraft.world.entity.item.ItemEntity
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.Level
 
 
-class BountyTypeItemTag : IBountyExchangeable {
+class BountyTypeItemTag : IBountyObjective {
 
-    override val id: Identifier = Identifier.parse("item_tag")
+    override val id: ResourceLocation = ResourceLocation.parse("item_tag")
 
     private fun entryAppliesToStack(entry: BountyDataEntry, stack: ItemStack): Boolean {
-        return stack.`is`(TagKey.create(Registries.ITEM, Identifier.parse(entry.content)))
+        return stack.`is`(TagKey.create(Registries.ITEM, ResourceLocation.parse(entry.content)))
     }
 
     override fun isValid(entry: PoolEntry, server: MinecraftServer): Boolean {
-        return getTagItems(getTagItemKey(Identifier.parse(entry.content))).isNotEmpty()
+        return getTagItems(server.registries().compositeAccess(), getTagItemKey(ResourceLocation.parse(entry.content))).isNotEmpty()
     }
 
     private fun getCurrentStacks(entry: BountyDataEntry, player: Player): Map<ItemStack, Int>? {
-        return player.inventory.getNonEquipmentItems().collect(entry.amount) {
+        return player.inventory.items.collect(entry.amount) {
             entryAppliesToStack(entry, this)
         }
     }
@@ -77,25 +76,11 @@ class BountyTypeItemTag : IBountyExchangeable {
         } ?: false
     }
 
-    override fun giveReward(entry: BountyDataEntry, player: Player) {
-        val item = getTagItems(getTag(entry)).randomOrNull() ?: return
-        val toGive = (0 until entry.amount).chunked(ItemStack(item).maxStackSize).map { it.size }
-        for (amtToGive in toGive) {
-            val stack = ItemStack(item, amtToGive)
-            if (!player.addItem(stack)) {
-                val pos = player.position()
-                player.level().addFreshEntity(
-                    ItemEntity(player.level(), pos.x, pos.y, pos.z, stack).apply { setPickUpDelay(0) }
-                )
-            }
-        }
-    }
-
     companion object {
-        private fun getTag(entry: BountyDataEntry) = TagKey.create(Registries.ITEM, Identifier.parse(entry.content))
+        private fun getTag(entry: BountyDataEntry) = TagKey.create(Registries.ITEM, ResourceLocation.parse(entry.content))
 
         fun getItems(world: Level, entry: BountyDataEntry): List<Item> {
-            return getTagItems(getTag(entry))
+            return getTagItems(world.registryAccess(), getTag(entry))
         }
     }
 

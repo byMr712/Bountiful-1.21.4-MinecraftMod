@@ -1,5 +1,4 @@
 pluginManagement {
-    includeBuild('../build-logic')
     repositories {
         gradlePluginPortal()
         mavenCentral()
@@ -11,7 +10,7 @@ pluginManagement {
                 }
             }
             filter {
-                includeGroupAndSubgroups('net.fabricmc')
+                includeGroup('net.fabricmc')
                 includeGroup('fabric-loom')
             }
         }
@@ -42,16 +41,8 @@ pluginManagement {
 
 plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '0.8.0'
-    id 'multiloader-settings'
 }
 
 // This should match the folder name of the project, or else IDEA may complain (see https://youtrack.jetbrains.com/issue/IDEA-317606)
 rootProject.name = 'Bountiful'
-include(':common', ':fabric', ':neoforge')
-
-if (file('../Kambrik').exists()) {
-    includeBuild('../Kambrik')
-}
-if (file('../Percale').exists()) {
-    includeBuild('../Percale')
-}
+include(':common', ':fabric')

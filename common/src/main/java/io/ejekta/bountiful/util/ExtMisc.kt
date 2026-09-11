@@ -1,6 +1,5 @@
 package io.ejekta.bountiful.util
 
-import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.mojang.serialization.JsonOps
 import io.ejekta.bountiful.components.BountyStack
@@ -17,7 +16,7 @@ import net.minecraft.nbt.CompoundTag
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.RegistryOps
 import net.minecraft.resources.ResourceKey
-import net.minecraft.resources.Identifier
+import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.tags.TagKey
@@ -25,7 +24,7 @@ import net.minecraft.world.Container
 import net.minecraft.world.SimpleMenuProvider
 import net.minecraft.world.entity.ai.Brain
 import net.minecraft.world.entity.ai.memory.MemoryModuleType
-import net.minecraft.world.entity.npc.villager.Villager
+import net.minecraft.world.entity.npc.Villager
 import net.minecraft.world.inventory.MenuConstructor
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
@@ -37,25 +36,15 @@ import java.util.*
 import kotlin.jvm.optionals.getOrNull
 import kotlin.random.Random
 
-fun isJsonSubset(sub: JsonElement?, sup: JsonElement?): Boolean {
-    if (sub == null || sup == null) return false
-    if (sub == sup) return true
-    return when {
-        sub.isJsonObject && sup.isJsonObject -> {
-            val subObj = sub.asJsonObject
-            val supObj = sup.asJsonObject
-            subObj.entrySet().all { (key, subValue) -> supObj.has(key) && isJsonSubset(subValue, supObj[key]) }
-        }
-        sub.isJsonArray && sup.isJsonArray -> {
-            val subArr = sub.asJsonArray
-            val supArr = sup.asJsonArray
-            subArr.size() <= supArr.size() && (0 until subArr.size()).all { i -> isJsonSubset(subArr[i], supArr[i]) }
-        }
-        else -> sub == sup
-    }
+operator fun <T> MinecraftServer.get(regResourceKey: ResourceKey<Registry<T>>): Registry<T> {
+    return registryAccess().lookupOrThrow(regResourceKey)
 }
 
-fun <T : Any> Registry<T>.getNullable(rl: Identifier): T? {
+operator fun <T> RegistryAccess.get(regResourceKey: ResourceKey<out Registry<T>>): Registry<T> {
+    return lookupOrThrow(regResourceKey)
+}
+
+fun <T : Any> Registry<T>.getNullable(rl: ResourceLocation): T? {
     return getOptional(rl).getOrNull()
 }
 
@@ -138,37 +127,45 @@ fun CompoundTag.putBlockPos(key: String, pos: BlockPos) {
 }
 
 fun CompoundTag.getBlockPos(key: String): BlockPos {
-    val tag = getCompound(key).orElse(null) ?: return BlockPos.ZERO
+    val tag = getCompound(key)
     return try {
         BlockPos(
-            tag.getInt("x").orElse(0),
-            tag.getInt("y").orElse(0),
-            tag.getInt("z").orElse(0)
+            tag.getInt("x"),
+            tag.getInt("y"),
+            tag.getInt("z")
         )
     } catch (e: Exception) {
         BlockPos.ZERO
     }
 }
 
-fun getTagItemKey(id: Identifier): TagKey<Item> = TagKey.create(BuiltInRegistries.ITEM.key(), id)
+fun getTagItemKey(id: ResourceLocation): TagKey<Item> = TagKey.create(BuiltInRegistries.ITEM.key(), id)
 
-fun getTagItems(tagKey: TagKey<Item>): List<Item> {
-    return BuiltInRegistries.ITEM.getTagOrEmpty(tagKey).map { it.value() }
+fun getTagItems(reg: RegistryAccess, tagKey: TagKey<Item>): List<Item> {
+    return getRegistryTags(reg, tagKey)
+}
+
+fun <T : Any> getRegistryTags(reg: RegistryAccess, tagKey: TagKey<T>): List<T> {
+    val typedReg = reg.lookup(tagKey.registry()).orElse(null) ?: return emptyList()
+    return typedReg.get(tagKey).map { tag ->
+        tag.map { h -> h.value() }
+    }.orElse(emptyList())
 }
 
 val KambrikMsg.ctx: Minecraft
     get() = Minecraft.getInstance()
 
 fun ServerPlayer.iterateBountyStacks(func: BountyStack.() -> Unit) {
-    inventory.getNonEquipmentItems().filter {
+    inventory.items.filter {
         it.item is BountyItem
     }.map { BountyStack(it) }.forEach(func)
 }
 
 fun Brain<*>.ensureMemoryModules(memoryList: List<MemoryModuleType<*>>) {
+    val memMM = memories as MutableMap
     for (item in memoryList) {
-        if (getMemory(item).isEmpty) {
-            setMemory(item, Optional.empty())
+        if (item !in memMM) {
+            memMM[item] = Optional.empty()
         }
     }
 }
@@ -197,7 +194,7 @@ val ServerPlayer.currentBoardInteracting: BoardBlockEntity?
     get() {
         val shPos = (containerMenu as? BoardScreenHandler)?.container?.pos
         shPos?.run {
-            level().getBlockEntity(this)?.let {
+            serverLevel().getBlockEntity(this)?.let {
                 return (it as? BoardBlockEntity)
             }
         }

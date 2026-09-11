@@ -1,5 +1,5 @@
 {
-  "parent": "block/cube",
+  "parent": "minecraft:block/cube",
   "textures": {
     "particle": "bountiful:block/bountyboard",
     "down": "bountiful:block/bountyboard_top",

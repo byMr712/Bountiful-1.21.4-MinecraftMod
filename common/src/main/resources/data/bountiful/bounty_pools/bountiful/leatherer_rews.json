@@ -5,67 +5,82 @@
         "leather_chest": {
             "type": "item",
             "content": "minecraft:leather_chestplate",
-            "forbidMarkers": [
-                "leather_material"
-            ],
             "amount": {
                 "min": 1,
                 "max": 1
             },
-            "unitWorth": 1200
+            "unitWorth": 1200,
+            "forbids": [
+                {
+                    "type": "item",
+                    "content": "minecraft:leather"
+                }
+            ]
         },
 
         "leather_legs": {
             "type": "item",
             "content": "minecraft:leather_leggings",
-            "forbidMarkers": [
-                "leather_material"
-            ],
             "amount": {
                 "min": 1,
                 "max": 1
             },
-            "unitWorth": 1050
+            "unitWorth": 1050,
+            "forbids": [
+                {
+                    "type": "item",
+                    "content": "minecraft:leather"
+                }
+            ]
         },
 
         "leather_helm": {
             "type": "item",
             "content": "minecraft:leather_helmet",
-            "forbidMarkers": [
-                "leather_material"
-            ],
             "amount": {
                 "min": 1,
                 "max": 1
             },
-            "unitWorth": 750
+            "unitWorth": 750,
+            "forbids": [
+                {
+                    "type": "item",
+                    "content": "minecraft:leather"
+                }
+            ]
         },
 
         "turtle_helmet": {
             "type": "item",
             "rarity": "UNCOMMON",
             "content": "minecraft:turtle_helmet",
-            "forbidMarkers": [
-                "turtle_scute_material"
-            ],
             "amount": {
                 "min": 1,
                 "max": 1
             },
-            "unitWorth": 1250
+            "unitWorth": 1250,
+            "forbids": [
+                {
+                    "type": "item",
+                    "content": "minecraft:turtle_scute"
+                }
+            ]
         },
 
         "leather_boots": {
             "type": "item",
             "content": "minecraft:leather_boots",
-            "forbidMarkers": [
-                "leather_material"
-            ],
             "amount": {
                 "min": 1,
                 "max": 1
             },
-            "unitWorth": 600
+            "unitWorth": 600,
+            "forbids": [
+                {
+                    "type": "item",
+                    "content": "minecraft:leather"
+                }
+            ]
         },
 
         "leather_horse_armor": {

@@ -25,9 +25,6 @@
         "magma_cream": {
             "type": "item",
             "content": "minecraft:magma_cream",
-            "markers": [
-                "magma_cream_material"
-            ],
             "amount": {
                 "min": 2,
                 "max": 6
@@ -133,9 +130,6 @@
             "type": "item",
 			"rarity": "RARE",
             "content": "minecraft:turtle_scute",
-            "markers": [
-                "turtle_scute_material"
-            ],
             "amount": {
                 "min": 2,
                 "max": 6

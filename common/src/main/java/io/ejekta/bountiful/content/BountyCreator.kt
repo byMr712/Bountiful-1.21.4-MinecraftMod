@@ -95,10 +95,9 @@ class BountyCreator private constructor(
         infoRarity = BountyRarity.entries[infoRarityOrdinal]
 
         // Gen rewards and total worth
-        val initialType = getCreation(true)
-        val initialPicks = genInitialValuedEntries(initialEntries, initialType)
+        val initialPicks = genInitialValuedEntries(initialEntries)
         val totalInitialWorth = initialPicks.sumOf { it.worth }
-        initialType.dataGetter(this).addAll(initialPicks)
+        getCreation(true).dataGetter(this).addAll(initialPicks)
 
         // return early if we have no rewards :(
         if (initialPicks.isEmpty()) {
@@ -117,8 +116,8 @@ class BountyCreator private constructor(
         infoTimeToComplete += 750L + BountifulIO.configData.bounty.flatBonusTimePerBountyInSecs
     }
 
-    private fun genInitialValuedEntries(entries: List<PoolEntry>, creationType: CreationType): List<ValuedEntry> {
-        return entries.map { it.toEntry(world, pos, applyModifiers = creationType == CreationType.REW) }
+    private fun genInitialValuedEntries(entries: List<PoolEntry>): List<ValuedEntry> {
+        return entries.map { it.toEntry(world, pos) }
     }
 
     private fun genInitialEntries(): List<PoolEntry> {
@@ -180,32 +179,32 @@ class BountyCreator private constructor(
 
         var fills = listOf<PoolEntry>()
 
-        val currencyPool = BountifulIO.configData.bounty.fillerCurrencyPool?.let {
-            val pool = BountifulContent.PoolMap[it]
-            if (pool == null) {
+        val doGreedy = BountifulIO.configData.bounty.fillerCurrencyPool?.let {
+            val currPool = BountifulContent.PoolMap[it]
+            if (currPool == null) {
                 Bountiful.LOGGER.warn("A currency pool is configured, but does not point to a valid loaded pool!")
-                return@let null
+                return@let false
             }
-            if (!pool.currency) {
-                Bountiful.LOGGER.warn("Pool '${pool.id}' must have 'currency' set to true to be used as a currency!")
-                return@let null
+            if (!currPool.currency) {
+                Bountiful.LOGGER.warn("Pool '${currPool.id} must have 'currency' set to true to be used as a currency!")
+                return@let false
             }
-            pool
-        }
+            return@let true
+        } ?: false
 
-        fills = if (currencyPool != null) {
-            currencyPool.items.toList()
+        fills = if (doGreedy) {
+            BountifulContent.PoolMap[BountifulIO.configData.bounty.fillerCurrencyPool]!!.items.toList()
         } else {
             getAllPossibleFillers(initialPools)
         }
 
-        val worthGroups = if (currencyPool != null) {
+        val worthGroups = if (doGreedy) {
             mutableListOf(worthNeeded)
         } else {
             randomSplit(worthNeeded, numFillers).toMutableList()
         }
 
-        val targetPct = if (currencyPool != null) 0.95 else 0.5
+        val targetPct = if (doGreedy) 0.95 else 0.5
 
         while (worthGroups.isNotEmpty()) {
             val w = worthGroups.removeAt(0)
@@ -218,16 +217,9 @@ class BountyCreator private constructor(
                 break
             }
 
-            val picked = pickFiller(unpicked, w, greedy = currencyPool != null) ?: break
+            val picked = pickFiller(unpicked, w, greedy = doGreedy) ?: break
 
-            val entry = picked.toEntry(
-                world,
-                pos,
-                w,
-                decrees.map { it.id }.toSet(),
-                isCurrency = currencyPool != null,
-                applyModifiers = getCreation(false) == CreationType.REW
-            )
+            val entry = picked.toEntry(world, pos, w, decrees.map { it.id }.toSet(), isCurrency = doGreedy)
 
             // Add time based on entry
             infoTimeToComplete += (picked.timeMult * entry.worth * 0.35).toLong()

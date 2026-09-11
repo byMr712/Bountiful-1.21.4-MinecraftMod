@@ -8,15 +8,16 @@ import io.ejekta.kambrik.bridge.Kambridge
 import net.minecraft.ChatFormatting
 import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
+import net.minecraft.core.registries.Registries
+import net.minecraft.resources.ResourceKey
+import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.TooltipFlag
-import net.minecraft.world.item.component.TooltipDisplay
-import java.util.function.Consumer
 
-class DecreeItem(props: Properties) : Item(
-    props.stacksTo(1).fireResistant()
-) {
+class DecreeItem(
+    properties: Properties = Properties().setId(ResourceKey.create(Registries.ITEM, ResourceLocation.parse("bountiful:decree"))).stacksTo(1).fireResistant()
+) : Item(properties) {
 
     override fun getName(stack: ItemStack): Component {
         return Component.translatable("bountiful.decree").withStyle(ChatFormatting.DARK_PURPLE)
@@ -24,17 +25,18 @@ class DecreeItem(props: Properties) : Item(
 
     override fun appendHoverText(
         pStack: ItemStack,
-        pContext: Item.TooltipContext,
-        pDisplay: TooltipDisplay,
-        pTooltip: Consumer<Component>,
+        pContext: TooltipContext,
+        pTooltipComponents: MutableList<Component>,
         pTooltipFlag: TooltipFlag
     ) {
         if (Kambridge.isOnServer()) {
             return
         }
-        val data = pStack[BountifulContent.DECREE_DATA]?.tooltipInfo(Minecraft.getInstance().level!!)
-        data?.forEach(pTooltip)
-        super.appendHoverText(pStack, pContext, pDisplay, pTooltip, pTooltipFlag)
+        if (pStack != null) {
+            val data = pStack[BountifulContent.DECREE_DATA]?.tooltipInfo(Minecraft.getInstance().level!!)
+            pTooltipComponents.addAll(data ?: emptySet())
+        }
+        super.appendHoverText(pStack, pContext, pTooltipComponents, pTooltipFlag)
     }
 
     companion object {

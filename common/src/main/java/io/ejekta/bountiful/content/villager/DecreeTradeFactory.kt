@@ -6,6 +6,7 @@ import io.ejekta.bountiful.decree.DecreeSpawnCondition
 import io.ejekta.bountiful.decree.DecreeSpawnRank
 import net.minecraft.util.RandomSource
 import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.npc.VillagerTrades
 import net.minecraft.world.item.Items
 import net.minecraft.world.item.trading.ItemCost
 import net.minecraft.world.item.trading.MerchantOffer
@@ -14,8 +15,8 @@ import kotlin.math.pow
 import kotlin.random.nextInt
 import kotlin.random.Random as KotlinRandom
 
-object DecreeTradeFactory {
-    fun createOffer(entity: Entity, random: RandomSource): MerchantOffer? {
+class DecreeTradeFactory : VillagerTrades.ItemListing {
+    override fun getOffer(entity: Entity, random: RandomSource): MerchantOffer? {
         val tradeValues = KotlinRandom.nextInt(2..5)
         val di = DecreeItem.create(DecreeSpawnCondition.WANDERING_TRADER, ranked = tradeValues, DecreeSpawnRank.RANDOM)
         val finalRank = di[BountifulContent.DECREE_DATA]?.ids?.size ?: 0

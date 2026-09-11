@@ -13,19 +13,20 @@ import io.ejekta.bountiful.messages.*
 import io.ejekta.bountiful.util.iterateBountyStacks
 import io.ejekta.kambrik.Kambrik
 import net.minecraft.advancements.Criterion
-import net.minecraft.advancements.criterion.EnterBlockTrigger
-import net.minecraft.advancements.criterion.PlayerTrigger
-import net.minecraft.advancements.criterion.SimpleCriterionTrigger
+import net.minecraft.advancements.critereon.EnterBlockTrigger
+import net.minecraft.advancements.critereon.PlayerTrigger
+import net.minecraft.advancements.critereon.SimpleCriterionTrigger
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.RegistryOps
 import net.minecraft.resources.ResourceKey
-import net.minecraft.resources.Identifier
+import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.TamableAnimal
+import net.minecraft.world.entity.npc.VillagerTrades
 import net.minecraft.world.item.CreativeModeTab
 import net.minecraft.world.item.CreativeModeTabs
 import net.minecraft.world.item.Item
@@ -38,19 +39,12 @@ interface BountifulSharedApi {
     fun isModLoaded(id: String): Boolean
 
     fun registerItemDynamicTextures() {
-        // 26.1.2 uses the new item model system. We should set model selection via item models
-        // or data components instead of predicate registration. Keeping this as a no-op for now.
+        // In 1.21.4, item dynamic predicates are handled by client item models
     }
 
     fun registerServerMessages() {
         Kambrik.Message.registerServerMessage<SelectBounty>(Bountiful.id("select_bounty"))
         Kambrik.Message.registerServerMessage<ServerPlayerStatus>(Bountiful.id("server_player_status"))
-        Kambrik.Message.registerServerMessage<SavePoolEntryEdit>(Bountiful.id("save_pool_entry_edit"))
-        Kambrik.Message.registerServerMessage<DeletePoolEntryEdit>(Bountiful.id("delete_pool_entry_edit"))
-        Kambrik.Message.registerServerMessage<SavePoolEdit>(Bountiful.id("save_pool_edit"))
-        Kambrik.Message.registerServerMessage<DeletePoolEdit>(Bountiful.id("delete_pool_edit"))
-        Kambrik.Message.registerServerMessage<SaveDecreeEdit>(Bountiful.id("save_decree_edit"))
-        Kambrik.Message.registerServerMessage<DeleteDecreeEdit>(Bountiful.id("delete_decree_edit"))
     }
 
     fun registerClientMessages() {
@@ -61,15 +55,14 @@ interface BountifulSharedApi {
     }
 
     fun registerJigsawPieces(server: MinecraftServer) {
-        if (BountifulIO.configData.board.villageGenFrequency <= 0f) return
         listOf("plains", "savanna", "snowy", "taiga", "desert").forEach { villageType ->
             Bountiful.LOGGER.info("Registering Bounty Board Jigsaw Piece for Village Type: $villageType")
             Kambrik.Structure.addToStructurePool(
                 server,
-                Identifier.parse("bountiful:village/common/bounty_gazebo"),
-                Identifier.parse("minecraft:village/$villageType/houses"),
-                Identifier.parse("bountiful:$villageType"),
-                1
+                ResourceLocation.parse("bountiful:village/common/bounty_gazebo"),
+                ResourceLocation.parse("minecraft:village/$villageType/houses"),
+                ResourceLocation.parse("bountiful:$villageType"),
+                BountifulIO.configData.board.villageGenFrequency
             )
         }
     }
@@ -109,9 +102,8 @@ interface BountifulSharedApi {
         )
     }
 
-    fun modifyTradeList(list: MutableList<*>) {
-        // 26.1.2 trades are data-driven; trade injection needs a new path.
-        // Leave as a no-op for now to keep compatibility across loaders.
+    fun modifyTradeList(list: MutableList<VillagerTrades.ItemListing>) {
+        list.add(DecreeTradeFactory())
     }
 
     // Update Criterion bounties
@@ -124,13 +116,13 @@ interface BountifulSharedApi {
                     for (obj in triggerObjs) {
 
                         // Find the trigger in the registry
-                        val objTrigger = BuiltInRegistries.TRIGGER_TYPES.getOptional(Identifier.parse(obj.content)).getOrNull()
+                        val objTrigger = BuiltInRegistries.TRIGGER_TYPES.getOptional(ResourceLocation.parse(obj.content)).getOrNull()
                         // If it cannot be found, or is different from the 'launching' trigger, skip evaluation
                         if (objTrigger == null || objTrigger::class != trigger::class) {
                             continue
                         }
 
-                        val regOps = RegistryOps.create(JsonOps.INSTANCE, player.level().registryAccess())
+                        val regOps = RegistryOps.create(JsonOps.INSTANCE, player.server.registryAccess())
 
                         // TODO on resource reload, re-'compile' each JSON block only once with the server and avoid this cost
                         val gs = GsonObject().apply {
