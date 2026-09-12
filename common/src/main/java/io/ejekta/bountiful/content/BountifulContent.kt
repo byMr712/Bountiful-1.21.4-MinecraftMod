@@ -37,7 +37,7 @@ object BountifulContent : KambrikAutoRegistrar {
 
     override fun getId() = "bountiful"
 
-    val Decrees = mutableListOf<Decree>()
+    val Decrees = java.util.concurrent.CopyOnWriteArrayList<Decree>()
 
     var Pools = listOf<Pool>()
         private set
