@@ -25,3 +25,6 @@ runs
 logs
 .kotlin/errors
 .kotlin/sessions
+
+# build artifacts
+*.jar

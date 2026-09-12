@@ -31,7 +31,7 @@
 	"bountiful.bounty.expired": "This bounty has expired.",
 	"bountiful.bounty.turnin": "Fullfill your bounty by right clicking on a bounty board.",
 
-	"bountiful.advancement.bounty_taken.desc": "Take a bounty from a bounty board",
+	"bountiful.advancement.bounty_taken.desc": "First Quest",
 
 	"bountiful.advancement.bounty_complete.title": "Honest Pay for Honest Work",
 	"bountiful.advancement.bounty_complete.desc": "Complete a bounty!",
@@ -113,6 +113,7 @@
 	"bountiful.command.none": "None",
 	"bountiful.command.settings_reloaded": "Bountiful settings reloaded!",
 	"bountiful.command.analyzer.title": "Analyzer!",
+	"bountiful.command.editor.title": "Bounty Editor!",
 	"bountiful.command.packmode_enabled": "Pack Mode enabled.",
 	"bountiful.command.export.success": "Data pack exported successfully. You can find it in the config folder.",
 	"bountiful.command.export.failed": "Data pack creation failed!",

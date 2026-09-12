@@ -3,7 +3,7 @@ package io.ejekta.bountiful.data
 import io.ejekta.bountiful.bounty.BountyRarity
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
-import net.minecraft.resources.Identifier
+import net.minecraft.resources.ResourceLocation
 
 @Serializable
 data class BountyModifier(
@@ -14,9 +14,9 @@ data class BountyModifier(
     val chance: Double = 1.0,
     val onlyCompatible: Boolean = true,
     val levels: PoolEntry.EntryRange = PoolEntry.EntryRange(10, 20),
-    val options: List<@Contextual Identifier> = emptyList(),
-    val applicableItems: List<@Contextual Identifier> = emptyList(),
-    val applicableTags: List<@Contextual Identifier> = emptyList(),
+    val options: List<@Contextual ResourceLocation> = emptyList(),
+    val applicableItems: List<@Contextual ResourceLocation> = emptyList(),
+    val applicableTags: List<@Contextual ResourceLocation> = emptyList(),
     val rarityWeightScale: Double = 1.0,
     val valueFlatScale: Double = 30.0,
     val valueCostScale: Double = 0.018

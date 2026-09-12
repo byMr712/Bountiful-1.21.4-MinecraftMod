@@ -18,11 +18,10 @@ import io.ejekta.kambrik.gui.draw.reactor.MouseReactor
 import io.ejekta.kambrik.gui.draw.widgets.KListWidget
 import io.ejekta.kambrik.gui.draw.widgets.KScrollbarVertical
 import io.ejekta.kambrik.text.textLiteral
-import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.Button
 import net.minecraft.client.gui.components.EditBox
 import net.minecraft.network.chat.Component
-import net.minecraft.resources.Identifier
+import net.minecraft.resources.ResourceLocation
 
 internal data class PoolEntryDraft(
     var key: String,
@@ -315,7 +314,7 @@ class PoolEditorPanel(private val parent: EditorScreen) {
     private val typeCycle = CycleButton(
         width = CYCLE_W,
         options = { BountyTypeRegistry.map { it.id.path } },
-        currentValue = { currentEntry()?.typeId?.let { Identifier.parse(it).path } ?: "" },
+        currentValue = { currentEntry()?.typeId?.let { ResourceLocation.tryParse(it)?.path } ?: "" },
         onCycle = { next ->
             currentEntry()?.let { entry ->
                 entry.typeId = BountyTypeRegistry.first { it.id.path == next }.id.toString()
@@ -429,7 +428,7 @@ class PoolEditorPanel(private val parent: EditorScreen) {
             // Search box was already drawn by super.extractRenderState BEFORE the modal covered it.
             // Re-extract its render state on top so it's visible above the modal backdrop.
             if (contentModal.hasSearch && ::contentSearchBox.isInitialized && contentSearchBox.visible) {
-                contentSearchBox.extractRenderState(dsl.context, dsl.mouseX, dsl.mouseY, dsl.delta ?: 0f)
+                contentSearchBox.render(dsl.context, dsl.mouseX, dsl.mouseY, dsl.delta ?: 0f)
             }
             return
         }
@@ -580,7 +579,7 @@ class PoolEditorPanel(private val parent: EditorScreen) {
         }.getOrNull() ?: return emptyList()
         val result = mutableListOf<String>()
         registry.listElements().forEach { holder ->
-            val id = holder.unwrapKey().map { it.identifier().toString() }.orElse(null)
+            val id = holder.unwrapKey().map { it.location().toString() }.orElse(null)
             if (id != null) result.add(id)
         }
         return result.sorted()
@@ -1049,7 +1048,7 @@ class PoolEditorPanel(private val parent: EditorScreen) {
         private const val SAVE_W = 56
         private const val SAVE_H = 16
 
-        private val SCROLLER = Identifier.parse("container/villager/scroller")
+        private val SCROLLER = ResourceLocation.withDefaultNamespace("container/villager/scroller")
 
         private const val COLOR_TEXT = 0xFFD9C0A3.toInt()
         private const val COLOR_MUTED = 0xFF8A7A63.toInt()

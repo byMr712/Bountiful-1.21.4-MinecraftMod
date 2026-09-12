@@ -1,7 +1,5 @@
 package io.ejekta.bountiful.content.board
 
-import com.mojang.serialization.Codec
-import com.mojang.serialization.codecs.RecordCodecBuilder
 import io.ejekta.bountiful.config.JsonFormats
 import io.ejekta.bountiful.util.readOnlyCopy
 import io.ejekta.kambrik.ext.ksx.decodeFromStringTag
@@ -9,17 +7,14 @@ import io.ejekta.kambrik.ext.ksx.encodeToStringTag
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
+import net.minecraft.core.HolderLookup
+import net.minecraft.nbt.CompoundTag
 import net.minecraft.nbt.StringTag
-import net.minecraft.resources.Identifier
 import net.minecraft.server.MinecraftServer
 import net.minecraft.util.datafix.DataFixTypes
 import net.minecraft.world.ContainerHelper
 import net.minecraft.world.SimpleContainer
-import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.saveddata.SavedData
-import net.minecraft.world.level.saveddata.SavedDataType
-import net.minecraft.world.level.storage.ValueInput
-import net.minecraft.world.level.storage.ValueOutput
 
 class GlobalBoardData : SavedData() {
 
@@ -36,75 +31,58 @@ class GlobalBoardData : SavedData() {
         }
     }
 
-    fun loadFrom(input: ValueInput) {
-        lastUpdatedTime = input.getLongOr("lastUpdated", 0L)
+    fun loadFrom(compoundTag: CompoundTag, levelRegistry: HolderLookup.Provider) {
+        val decreeList = compoundTag.getCompound("decree_inv")
+        val bountyList = compoundTag.getCompound("bounty_inv")
 
-        ContainerHelper.loadAllItems(input.childOrEmpty("decree_inv"), decrees.items)
-        ContainerHelper.loadAllItems(input.childOrEmpty("bounty_inv"), bounties.items)
+        lastUpdatedTime = compoundTag.getLong("lastUpdated")
 
-        input.getString("completed").ifPresent { str ->
-            playerData = JsonFormats.BlockEntity.decodeFromStringTag(playerDataSerializer, StringTag.valueOf(str)).toMutableMap()
+        ContainerHelper.loadAllItems(decreeList, decrees.items, levelRegistry)
+        ContainerHelper.loadAllItems(bountyList, bounties.items, levelRegistry)
+
+        val playerDataMap = compoundTag.get("completed")
+        if (playerDataMap != null) {
+            playerData = JsonFormats.BlockEntity.decodeFromStringTag(playerDataSerializer, playerDataMap as StringTag).toMutableMap()
         }
-        input.getString("timestamps").ifPresent { str ->
-            bountyTimestamps = JsonFormats.BlockEntity.decodeFromStringTag(bountyStampSerializer, StringTag.valueOf(str)).toMutableMap()
+
+        val timeStampMap = compoundTag.get("timestamps")
+        if (timeStampMap != null) {
+            bountyTimestamps = JsonFormats.BlockEntity.decodeFromStringTag(bountyStampSerializer, timeStampMap as StringTag).toMutableMap()
         }
     }
 
-    fun saveTo(output: ValueOutput) {
-        output.putLong("lastUpdated", lastUpdatedTime)
+    override fun save(compoundTag: CompoundTag, levelRegistry: HolderLookup.Provider): CompoundTag {
+        compoundTag.putLong("lastUpdated", lastUpdatedTime)
 
-        output.putString("completed", JsonFormats.BlockEntity.encodeToStringTag(playerDataSerializer, playerData).value())
-        output.putString("timestamps", JsonFormats.BlockEntity.encodeToStringTag(bountyStampSerializer, bountyTimestamps).value())
+        val doneMap = JsonFormats.BlockEntity.encodeToStringTag(playerDataSerializer, playerData)
+        compoundTag.put("completed", doneMap)
 
-        ContainerHelper.saveAllItems(output.child("decree_inv"), decrees.readOnlyCopy)
-        ContainerHelper.saveAllItems(output.child("bounty_inv"), bounties.readOnlyCopy)
+        val timeStampMap = JsonFormats.BlockEntity.encodeToStringTag(bountyStampSerializer, bountyTimestamps)
+        compoundTag.put("timestamps", timeStampMap)
+
+        val decreeList = CompoundTag()
+        ContainerHelper.saveAllItems(decreeList, decrees.readOnlyCopy, levelRegistry)
+        compoundTag.put("decree_inv", decreeList)
+
+        val bountyList = CompoundTag()
+        ContainerHelper.saveAllItems(bountyList, bounties.readOnlyCopy, levelRegistry)
+        compoundTag.put("bounty_inv", bountyList)
+
+        return compoundTag
     }
 
     companion object {
         internal val playerDataSerializer = MapSerializer(String.serializer(), PlayerBoardData.serializer())
         private val bountyStampSerializer = MapSerializer(Int.serializer(), Long.serializer())
 
-        private val CODEC: Codec<GlobalBoardData> = RecordCodecBuilder.create { instance ->
-            instance.group(
-                ItemStack.OPTIONAL_CODEC.listOf()
-                    .optionalFieldOf("decree_inv", emptyList())
-                    .forGetter { data -> (0 until 3).map { data.decrees.getItem(it) } },
-                ItemStack.OPTIONAL_CODEC.listOf()
-                    .optionalFieldOf("bounty_inv", emptyList())
-                    .forGetter { data -> (0 until BoardInventory.BOUNTY_SIZE).map { data.bounties.getItem(it) } },
-                Codec.unboundedMap(Codec.STRING, Codec.LONG)
-                    .optionalFieldOf("timestamps", emptyMap())
-                    .forGetter { data -> data.bountyTimestamps.entries.associate { it.key.toString() to it.value } },
-                Codec.LONG.optionalFieldOf("last_updated", 0L)
-                    .forGetter(GlobalBoardData::lastUpdatedTime),
-                Codec.STRING.optionalFieldOf("completed", "")
-                    .forGetter { data ->
-                        if (data.playerData.isEmpty()) "" else JsonFormats.BlockEntity.encodeToStringTag(playerDataSerializer, data.playerData).value()
-                    }
-            ).apply(instance) { decreeList, bountyList, timestamps, lastUpdated, completedStr ->
-                GlobalBoardData().also { gbd ->
-                    decreeList.forEachIndexed { slot, stack -> gbd.decrees.setItem(slot, stack) }
-                    bountyList.forEachIndexed { slot, stack -> gbd.bounties.setItem(slot, stack) }
-                    gbd.bountyTimestamps = timestamps.mapKeys { it.key.toInt() }.toMutableMap()
-                    gbd.lastUpdatedTime = lastUpdated
-                    if (completedStr.isNotEmpty()) {
-                        runCatching {
-                            gbd.playerData = JsonFormats.BlockEntity.decodeFromStringTag(playerDataSerializer, StringTag.valueOf(completedStr)).toMutableMap()
-                        }
-                    }
-                }
-            }
-        }
-
-        val TYPE: SavedDataType<GlobalBoardData> = SavedDataType(
-            Identifier.fromNamespaceAndPath("bountiful", "global_board"),
+        private val TYPE: SavedData.Factory<GlobalBoardData> = SavedData.Factory(
             ::GlobalBoardData,
-            CODEC,
+            { compoundTag, levelRegistry -> GlobalBoardData().apply { loadFrom(compoundTag, levelRegistry) } },
             DataFixTypes.LEVEL
         )
 
         fun getOrCreate(server: MinecraftServer): GlobalBoardData {
-            return server.dataStorage.computeIfAbsent(TYPE)
+            return server.overworld().getDataStorage().computeIfAbsent(TYPE, "global_board")
         }
     }
 }

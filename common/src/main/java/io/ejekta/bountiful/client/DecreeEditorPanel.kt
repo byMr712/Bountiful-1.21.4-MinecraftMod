@@ -12,12 +12,11 @@ import io.ejekta.kambrik.gui.draw.reactor.MouseReactor
 import io.ejekta.kambrik.gui.draw.widgets.KListWidget
 import io.ejekta.kambrik.gui.draw.widgets.KScrollbarVertical
 import io.ejekta.kambrik.text.textLiteral
-import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.Button
 import net.minecraft.client.gui.components.EditBox
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.network.chat.Component
-import net.minecraft.resources.Identifier
+import net.minecraft.resources.ResourceLocation
 
 internal data class DecreeDraft(
     var id: String,
@@ -493,7 +492,7 @@ class DecreeEditorPanel(private val parent: EditorScreen) {
         private const val SAVE_BTN_W = 60
         private const val SAVE_BTN_H = 16
 
-        private val SCROLLER = Identifier.parse("container/villager/scroller")
+        private val SCROLLER = ResourceLocation.withDefaultNamespace("container/villager/scroller")
 
         private const val COLOR_TEXT = 0xFFD9C0A3.toInt()
         private const val COLOR_WARN = 0xFFFF8080.toInt()

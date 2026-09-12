@@ -3,6 +3,7 @@ package io.ejekta.bountiful.config
 import io.ejekta.bountiful.Bountiful
 import io.ejekta.bountiful.bridge.Bountybridge
 import io.ejekta.bountiful.content.BountifulContent
+import io.ejekta.bountiful.data.BountyModifier
 import io.ejekta.bountiful.data.Decree
 import io.ejekta.bountiful.data.Pool
 import io.ejekta.kambrik.Kambrik
@@ -55,6 +56,7 @@ object BountifulIO {
 
     private val poolConfigs = rootFolder.ensured("bounty_pools")
     private val decreeConfigs = rootFolder.ensured("bounty_decrees")
+    private val modifierConfigs = rootFolder.ensured("bounty_modifiers")
 
     fun getPoolFile(poolName: String): KambrikConfigFile<Pool> {
         return KambrikConfigFile(
@@ -62,6 +64,18 @@ object BountifulIO {
             "$poolName.json", JsonFormats.Config.json, KambrikParseFailMode.LEAVE, Pool.serializer()) {
             Pool().apply { setup(poolName) }
         }
+    }
+
+    fun getDecreeFile(decreeId: String): KambrikConfigFile<Decree> {
+        return KambrikConfigFile(
+            decreeConfigs,
+            "$decreeId.json", JsonFormats.Config.json, KambrikParseFailMode.LEAVE, Decree.serializer()) {
+            Decree(objectives = mutableSetOf(), rewards = mutableSetOf())
+        }
+    }
+
+    fun deleteDecreeConfigFile(decreeId: String) {
+        Files.deleteIfExists(decreeConfigs.resolve("$decreeId.json"))
     }
 
     private fun saveConfig() {
@@ -163,7 +177,14 @@ object BountifulIO {
                     "Top Objs: ${topObjectives.joinToString(", ") { "${it.id} (${it.maxWorth})" }} total up to: $objWorstWorth"
                 )
             }
-
+        },
+        ResourceLoadStrategy("Modifier Loader", "bounty_modifiers", modifierConfigs, BountyModifier.serializer(),
+            onClear = { BountifulContent.ModifierMap.clear() },
+            onComplete = { BountifulContent.ModifierMap.putAll(it.associateBy { mod -> Bountiful.id(mod.id) }) }
+        ) {
+            if (clampedChance <= 0) {
+                Bountiful.logAndWarn("Bounty modifier '$id' has a non-positive chance and will never apply to anything!")
+            }
         }
     )
 

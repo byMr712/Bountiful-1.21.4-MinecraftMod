@@ -9,8 +9,7 @@ import io.ejekta.kambrik.text.textLiteral
 import net.minecraft.client.Minecraft
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.network.chat.Component
-import net.minecraft.resources.Identifier
-import net.minecraft.tags.TagKey
+import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
@@ -38,7 +37,7 @@ class ContentPickerModal(
         BuiltInRegistries.ITEM.filter { it != Items.AIR }.sortedBy { BuiltInRegistries.ITEM.getKey(it).toString() }
     }
 
-    private val itemTagListAll: List<Identifier> by lazy {
+    private val itemTagListAll: List<ResourceLocation> by lazy {
         BuiltInRegistries.ITEM.getTags().toList()
             .mapNotNull { entry -> runCatching { entry.key().location() }.getOrNull() }
             .distinct()
@@ -63,7 +62,7 @@ class ContentPickerModal(
         }
     }
 
-    private fun filteredItemTagList(): List<Identifier> {
+    private fun filteredItemTagList(): List<ResourceLocation> {
         val q = searchProvider().trim().lowercase()
         if (q.isEmpty()) return itemTagListAll
         return itemTagListAll.filter { it.toString().contains(q, ignoreCase = true) }
@@ -209,7 +208,7 @@ class ContentPickerModal(
         }
     }
 
-    private fun KGuiDsl.drawTagGrid(list: List<Identifier>, startRow: Int) {
+    private fun KGuiDsl.drawTagGrid(list: List<ResourceLocation>, startRow: Int) {
         val world = Minecraft.getInstance().level
         val gameTime = world?.gameTime ?: 0L
         val frame = (gameTime / 30L).toInt()
@@ -218,7 +217,7 @@ class ContentPickerModal(
             for (c in 0 until TAG_COLS) {
                 val idx = gridRow * TAG_COLS + c
                 val tagId = list.getOrNull(idx) ?: return
-                val items = runCatching { getTagItems(getTagItemKey(tagId)) }.getOrElse { emptyList() }
+                val items = runCatching { world?.let { getTagItems(it.registryAccess(), getTagItemKey(tagId)) } ?: emptyList() }.getOrElse { emptyList() }
                 val stack = if (items.isEmpty()) ItemStack(Items.BARRIER) else ItemStack(items[frame % items.size])
                 offset(c * TAG_CELL + 1, r * TAG_CELL + 1) {
                     area(TAG_CELL - 2, TAG_CELL - 2) {
@@ -312,6 +311,6 @@ class ContentPickerModal(
         private const val LIST_VISIBLE_ROWS = 10
 
         private const val SCROLL_KNOB = 27
-        private val SCROLLER = Identifier.parse("container/villager/scroller")
+        private val SCROLLER = ResourceLocation.withDefaultNamespace("container/villager/scroller")
     }
 }

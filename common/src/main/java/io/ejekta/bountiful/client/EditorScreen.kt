@@ -4,18 +4,22 @@ import io.ejekta.bountiful.client.widgets.EditorTabButton
 import io.ejekta.kambrik.gui.draw.KGui
 import io.ejekta.kambrik.gui.screen.KambrikContainerScreen
 import net.minecraft.client.gui.Font
-import net.minecraft.client.gui.GuiGraphicsExtractor
+import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.EditBox
 import net.minecraft.client.gui.components.events.GuiEventListener
 import net.minecraft.client.gui.narration.NarratableEntry
 import net.minecraft.client.gui.components.Renderable
-import net.minecraft.client.input.KeyEvent
 import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.player.Inventory
 import net.minecraft.world.inventory.AbstractContainerMenu
 
 class EditorScreen(handler: AbstractContainerMenu, inventory: Inventory, title: Component) :
-    KambrikContainerScreen<AbstractContainerMenu>(handler, inventory, title, GUI_WIDTH, GUI_HEIGHT) {
+    KambrikContainerScreen<AbstractContainerMenu>(handler, inventory, title) {
+
+    init {
+        imageWidth = GUI_WIDTH
+        imageHeight = GUI_HEIGHT
+    }
 
     enum class Tab { POOLS, DECREES }
 
@@ -70,11 +74,11 @@ class EditorScreen(handler: AbstractContainerMenu, inventory: Inventory, title: 
         applyTabVisibility()
     }
 
-    override fun onDrawBackground(context: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
+    override fun onDrawBackground(context: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
         bgGui.draw(context, mouseX, mouseY, delta)
     }
 
-    override fun onDrawForeground(context: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
+    override fun onDrawForeground(context: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
         fgGui.draw(context, mouseX, mouseY, delta)
     }
 
@@ -92,15 +96,15 @@ class EditorScreen(handler: AbstractContainerMenu, inventory: Inventory, title: 
     val leftPosPublic: Int get() = leftPos
     val topPosPublic: Int get() = topPos
 
-    override fun keyPressed(event: KeyEvent): Boolean {
+    override fun keyPressed(keyCode: Int, scanCode: Int, modifiers: Int): Boolean {
         // When an EditBox has focus, a printable key (default 'E') would otherwise match
         // `keyInventory` inside AbstractContainerScreen.keyPressed and close the screen.
         // Swallow that here so charTyped can deliver the character to the text field instead.
         val f = this.focused
-        if (f is EditBox && f.canConsumeInput() && minecraft.options.keyInventory.matches(event)) {
+        if (f is EditBox && f.canConsumeInput() && minecraft?.options?.keyInventory?.matches(keyCode, scanCode) == true) {
             return true
         }
-        return super.keyPressed(event)
+        return super.keyPressed(keyCode, scanCode, modifiers)
     }
 
     fun bodyX(): Int = leftPos

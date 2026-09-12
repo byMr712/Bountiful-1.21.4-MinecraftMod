@@ -6,7 +6,7 @@ import io.ejekta.kambrik.gui.draw.widgets.KListWidget
 import io.ejekta.kambrik.gui.draw.widgets.KScrollbarVertical
 import io.ejekta.kambrik.text.textLiteral
 import net.minecraft.network.chat.Component
-import net.minecraft.resources.Identifier
+import net.minecraft.resources.ResourceLocation
 
 class EditorPickerModal(
     private val parent: EditorScreen,
@@ -179,6 +179,6 @@ class EditorPickerModal(
         private const val SCROLL_KNOB_H = 27
         private const val BTN_W = 48
         private const val BTN_H = 14
-        private val SCROLLER = Identifier.parse("container/villager/scroller")
+        private val SCROLLER = ResourceLocation.withDefaultNamespace("container/villager/scroller")
     }
 }

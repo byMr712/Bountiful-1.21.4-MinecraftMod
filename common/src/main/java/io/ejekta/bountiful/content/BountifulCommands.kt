@@ -8,6 +8,7 @@ import io.ejekta.bountiful.bounty.types.BountyTypeRegistry
 import io.ejekta.bountiful.components.BountyStack
 import io.ejekta.bountiful.config.BountifulIO
 import io.ejekta.bountiful.content.gui.AnalyzerScreenHandler
+import io.ejekta.bountiful.content.gui.EditorScreenHandler
 import io.ejekta.bountiful.content.item.DecreeItem
 import io.ejekta.bountiful.data.PoolEntry
 import io.ejekta.bountiful.decree.DecreeSpawnCondition
@@ -130,6 +131,16 @@ object BountifulCommands {
                     try {
                         source.player?.openSimpleMenu(tr("analyzer.title")) { syncId: Int, playerInventory: Inventory, player: Player ->
                             AnalyzerScreenHandler(syncId, playerInventory, SimpleContainer(AnalyzerScreenHandler.SIZE))
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+
+                "editor" runs {
+                    try {
+                        source.player?.openSimpleMenu(tr("editor.title")) { syncId: Int, playerInventory: Inventory, player: Player ->
+                            EditorScreenHandler(syncId, playerInventory)
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()

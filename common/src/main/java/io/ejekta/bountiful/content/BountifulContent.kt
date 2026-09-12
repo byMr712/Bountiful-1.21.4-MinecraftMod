@@ -9,8 +9,10 @@ import io.ejekta.bountiful.content.board.BoardBlock
 import io.ejekta.bountiful.content.board.BoardBlockEntity
 import io.ejekta.bountiful.content.gui.AnalyzerScreenHandler
 import io.ejekta.bountiful.content.gui.BoardScreenHandler
+import io.ejekta.bountiful.content.gui.EditorScreenHandler
 import io.ejekta.bountiful.content.item.BountyItem
 import io.ejekta.bountiful.content.item.DecreeItem
+import io.ejekta.bountiful.data.BountyModifier
 import io.ejekta.bountiful.data.Decree
 import io.ejekta.bountiful.data.Pool
 import io.ejekta.bountiful.data.PoolEntry
@@ -22,6 +24,7 @@ import net.minecraft.core.Holder
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.core.registries.Registries
 import net.minecraft.resources.ResourceKey
+import net.minecraft.resources.ResourceLocation
 import net.minecraft.stats.StatFormatter
 import net.minecraft.world.entity.ai.memory.MemoryModuleType
 import net.minecraft.world.entity.ai.village.poi.PoiType
@@ -48,6 +51,8 @@ object BountifulContent : KambrikAutoRegistrar {
     var PoolEntryMap = mapOf<String, PoolEntry>()
         private set
 
+    val ModifierMap = mutableMapOf<ResourceLocation, BountyModifier>()
+
     fun populatePools(newPools: List<Pool>) {
         Pools = newPools
         PoolMap = Pools.associateBy { it.id }
@@ -73,6 +78,8 @@ object BountifulContent : KambrikAutoRegistrar {
     val BOARD_SCREEN_HANDLER by "board" forScreen ::BoardScreenHandler
 
     val ANALYZER_SCREEN_HANDLER by "analyzer" forScreen ::AnalyzerScreenHandler
+
+    val EDITOR_SCREEN_HANDLER by "editor" forScreen ::EditorScreenHandler
 
     val MEM_MODULE_NEAREST_BOARD_INSTANCE = "nearest_bounty_board".forRegistration(
         BuiltInRegistries.MEMORY_MODULE_TYPE

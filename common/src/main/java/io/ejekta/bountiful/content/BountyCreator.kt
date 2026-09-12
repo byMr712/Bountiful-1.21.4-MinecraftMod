@@ -4,6 +4,7 @@ import io.ejekta.bountiful.Bountiful
 import io.ejekta.bountiful.bounty.BountyRarity
 import io.ejekta.bountiful.bounty.types.IBountyObjective
 import io.ejekta.bountiful.bounty.types.IBountyReward
+import io.ejekta.bountiful.bounty.types.builtin.BountyTypeItem
 import io.ejekta.bountiful.components.BountyDataEntry
 import io.ejekta.bountiful.components.BountyInfo
 import io.ejekta.bountiful.config.BountifulIO
@@ -117,7 +118,28 @@ class BountyCreator private constructor(
     }
 
     private fun genInitialValuedEntries(entries: List<PoolEntry>): List<ValuedEntry> {
-        return entries.map { it.toEntry(world, pos) }
+        return entries.map { entry ->
+            val base = entry.toEntry(world, pos)
+
+            // Apply reward modifiers to initial reward entries (not objectives)
+            if (getCreation(true) == CreationType.REW && entry.modifiers.isNotEmpty() && entry.typeLogic is BountyTypeItem) {
+                val modified = try {
+                    RewardModifierEngine.apply(world, entry, base.dataEntry.content, base.dataEntry.amount, base.worth)
+                } catch (e: Exception) {
+                    Bountiful.logAndWarn("Failed to apply reward modifiers to '$entry': ${e.message}")
+                    null
+                }
+
+                if (modified != null) {
+                    return@map base.copy(
+                        dataEntry = base.dataEntry.copy(data = modified.components, rarity = modified.rarity),
+                        worth = modified.worth
+                    )
+                }
+            }
+
+            base
+        }
     }
 
     private fun genInitialEntries(): List<PoolEntry> {

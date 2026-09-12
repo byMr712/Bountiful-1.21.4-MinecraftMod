@@ -147,6 +147,21 @@ data class KGuiDsl(val ctx: KGui, val context: GuiGraphics, val mouseX: Int, val
         textCentered(x, y, textLiteral("", textDsl))
     }
 
+    fun textShadowed(x: Int, y: Int, text: Component, color: Int = 0xFFFFFF) {
+        context.drawString(fontRenderer, text, ctx.absX(x), ctx.absY(y), color, true)
+    }
+
+    fun textCenteredColored(x: Int, y: Int, text: Component, color: Int = 0xFFFFFF) {
+        context.drawString(
+            fontRenderer,
+            text,
+            ctx.absX(x) - fontRenderer.width(text) / 2,
+            ctx.absY(y),
+            color,
+            true
+        )
+    }
+
     fun textImmediate(x: Int, y: Int, text: Component) {
         val poseStack = PoseStack()
         poseStack.translate(0.0, 0.0, 201.0)

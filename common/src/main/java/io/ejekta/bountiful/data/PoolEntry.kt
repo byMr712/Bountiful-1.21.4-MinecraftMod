@@ -169,6 +169,10 @@ class PoolEntry private constructor() {
 
     var mystery: Boolean = false
 
+    var markers: List<String> = emptyList()
+    var forbidMarkers: List<String> = emptyList()
+    var modifiers: List<@Contextual ResourceLocation> = emptyList()
+
     //var nbt: @Contextual CompoundTag? = null
 
     val worthSteps: List<Double>

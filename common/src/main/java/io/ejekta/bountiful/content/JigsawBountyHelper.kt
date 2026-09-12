@@ -3,7 +3,7 @@ package io.ejekta.bountiful.content
 import io.ejekta.bountiful.config.BountifulIO
 import io.ejekta.bountiful.mixin.JigsawPlacerAccessor
 import io.ejekta.bountiful.mixin.SinglePoolElementAccessor
-import net.minecraft.resources.Identifier
+import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.level.levelgen.structure.PoolElementStructurePiece
 import net.minecraft.world.level.levelgen.structure.pools.SinglePoolElement
 import net.minecraft.world.level.levelgen.structure.pools.StructurePoolElement
@@ -11,7 +11,7 @@ import java.util.Random
 
 object JigsawBountyHelper {
 
-    private val BOUNTY_GAZEBO_ID = Identifier.fromNamespaceAndPath("bountiful", "village/common/bounty_gazebo")
+    private val BOUNTY_GAZEBO_ID = ResourceLocation.fromNamespaceAndPath("bountiful", "village/common/bounty_gazebo")
 
     // null = not inside a village generation call on this thread
     private val allowedBoards: ThreadLocal<Int?> = ThreadLocal.withInitial { null }
@@ -34,7 +34,7 @@ object JigsawBountyHelper {
     private fun isBountyBoardElement(element: StructurePoolElement): Boolean {
         if (element !is SinglePoolElement) return false
         val accessor = element as SinglePoolElementAccessor
-        val id: Identifier = accessor.bountiful_getTemplate().left().orElse(null) ?: return false
+        val id: ResourceLocation = accessor.bountiful_getTemplate().left().orElse(null) ?: return false
         return id == BOUNTY_GAZEBO_ID
     }
 
