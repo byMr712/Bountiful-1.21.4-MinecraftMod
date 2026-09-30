@@ -8,7 +8,7 @@
 ![ModMenu](https://img.shields.io/badge/ModMenu-Supported-blue.svg)
 ![License](https://img.shields.io/badge/License-LGPL_3.0-blue.svg)
 
-Порт и обновление мода **Bountiful** для **Minecraft 1.21.4 (Fabric)** от **byMr712**.
+Порт и обновление мода **Bountiful** для **Minecraft 1.21.4 (Fabric)**.
 
 Оригинальный разработчик: [Ejektaflex/Bountiful](https://github.com/ejektaflex/Bountiful).
 
