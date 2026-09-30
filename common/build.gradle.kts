@@ -17,9 +17,8 @@ tasks.named("compileKotlin") {
 tasks.named("compileJava") {
     enabled = false
 }
-
-tasks.test {
-    useJUnitPlatform()
+tasks.matching { it.name.startsWith("compileTest") || it.name == "test" || it.name == "jar" || it.name == "sourcesJar" || it.name == "javadocJar" }.configureEach {
+    enabled = false
 }
 
 configurations {

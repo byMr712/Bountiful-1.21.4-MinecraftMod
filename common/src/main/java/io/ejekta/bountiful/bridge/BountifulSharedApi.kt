@@ -17,6 +17,7 @@ import net.minecraft.advancements.critereon.EnterBlockTrigger
 import net.minecraft.advancements.critereon.PlayerTrigger
 import net.minecraft.advancements.critereon.SimpleCriterionTrigger
 import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.core.registries.Registries
 import net.minecraft.resources.RegistryOps
 import net.minecraft.resources.ResourceKey
 import net.minecraft.resources.ResourceLocation
@@ -55,15 +56,56 @@ interface BountifulSharedApi {
     }
 
     fun registerJigsawPieces(server: MinecraftServer) {
+        val nbtLocation = ResourceLocation.parse("bountiful:village/common/bounty_gazebo")
+        val weight = BountifulIO.configData.board.villageGenFrequency
+        if (weight <= 0) return
+
+        val poolRegistry = server.registryAccess().lookupOrThrow(Registries.TEMPLATE_POOL)
+        val injectedPools = mutableSetOf<ResourceLocation>()
+
+        // 1. Standard Vanilla Villages
         listOf("plains", "savanna", "snowy", "taiga", "desert").forEach { villageType ->
-            Bountiful.LOGGER.info("Registering Bounty Board Jigsaw Piece for Village Type: $villageType")
-            Kambrik.Structure.addToStructurePool(
-                server,
-                ResourceLocation.parse("bountiful:village/common/bounty_gazebo"),
-                ResourceLocation.parse("minecraft:village/$villageType/houses"),
-                ResourceLocation.parse("bountiful:$villageType"),
-                BountifulIO.configData.board.villageGenFrequency
-            )
+            val poolLoc = ResourceLocation.parse("minecraft:village/$villageType/houses")
+            val procLoc = ResourceLocation.parse("bountiful:$villageType")
+            Bountiful.LOGGER.info("Registering Bounty Board Jigsaw Piece for Vanilla Village: $poolLoc")
+            Kambrik.Structure.addToStructurePool(server, nbtLocation, poolLoc, procLoc, weight)
+            injectedPools.add(poolLoc)
+        }
+
+        // 2. Dynamic injection for Modded & Datapack Villages (Towns & Towers, CTOV, Repurposed Structures, etc.)
+        poolRegistry.keySet().forEach { poolLoc ->
+            if (poolLoc in injectedPools || poolLoc.namespace == "bountiful") return@forEach
+
+            val path = poolLoc.path.lowercase()
+            val namespace = poolLoc.namespace.lowercase()
+
+            val isVillage = path.contains("village") || namespace.contains("village") ||
+                            namespace.contains("town") || namespace.contains("ctov") ||
+                            path.contains("town")
+            val isHousesOrCenter = path.contains("/houses") || path.contains("/house") ||
+                                   path.contains("/streets") || path.contains("/town_centers") ||
+                                   path.contains("/center") || path.contains("/decor")
+
+            val isExcluded = path.contains("zombie") || path.contains("abandoned") ||
+                             path.contains("ruin") || path.contains("monument")
+
+            if (isVillage && isHousesOrCenter && !isExcluded) {
+                val procType = when {
+                    path.contains("desert") || path.contains("badlands") || path.contains("sand") -> "desert"
+                    path.contains("savanna") || path.contains("acacia") -> "savanna"
+                    path.contains("snow") || path.contains("ice") || path.contains("frozen") || path.contains("tundra") -> "snowy"
+                    path.contains("taiga") || path.contains("spruce") || path.contains("pine") || path.contains("mountain") -> "taiga"
+                    else -> "plains"
+                }
+                val procLoc = ResourceLocation.parse("bountiful:$procType")
+                Bountiful.LOGGER.info("Registering Bounty Board Jigsaw Piece for Modded Village: $poolLoc (Processor: $procType)")
+                try {
+                    Kambrik.Structure.addToStructurePool(server, nbtLocation, poolLoc, procLoc, weight)
+                    injectedPools.add(poolLoc)
+                } catch (e: Exception) {
+                    Bountiful.LOGGER.warn("Could not add Bounty Board to pool $poolLoc: ${e.message}")
+                }
+            }
         }
     }
 
