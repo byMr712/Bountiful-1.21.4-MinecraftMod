@@ -128,13 +128,17 @@ class BoardBlockEntity(pos: BlockPos, state: BlockState) : BlockEntity(Bountiful
     }
 
     private fun getBoardDecrees(): Set<Decree> {
-        return BountifulContent.getDecrees(
-            decrees.readOnlyCopy.filter {
-                it.item is DecreeItem && it.count > 0
-            }.map {
-                it[BountifulContent.DECREE_DATA]?.ids ?: emptySet()
-            }.flatten().toSet()
-        )
+        val ids = mutableSetOf<String>()
+        for (i in 0 until decrees.containerSize) {
+            val stack = decrees.getItem(i)
+            if (stack.item is DecreeItem && stack.count > 0) {
+                val data = stack[BountifulContent.DECREE_DATA]
+                if (data != null) {
+                    ids.addAll(data.ids)
+                }
+            }
+        }
+        return BountifulContent.getDecrees(ids)
     }
 
     private fun getPlayersTrackingUs(): List<ServerPlayer> {
@@ -239,8 +243,8 @@ class BoardBlockEntity(pos: BlockPos, state: BlockState) : BlockEntity(Bountiful
             repeat(5) {
                 randomlyUpdateBoard()
             }
+            setChanged()
         }
-        setChanged()
     }
 
     // Set unset decrees
@@ -561,7 +565,9 @@ class BoardBlockEntity(pos: BlockPos, state: BlockState) : BlockEntity(Bountiful
         fun tick(world: Level, pos: BlockPos, state: BlockState, entity: BoardBlockEntity) {
             if (world.isClientSide) return
 
-            entity.upkeepTryInitialPopulation()
+            if (entity.isPristine) {
+                entity.upkeepTryInitialPopulation()
+            }
 
             world.everySeconds(1) {
                 entity.upkeepRevealDecrees()

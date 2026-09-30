@@ -6,6 +6,10 @@ plugins {
     kotlin("plugin.serialization") version "2.0.21"
 }
 
+tasks.matching { it.name == "jar" || it.name == "sourcesJar" || it.name == "javadocJar" }.configureEach {
+    enabled = false
+}
+
 repositories {
     mavenCentral()
 }
@@ -20,15 +24,14 @@ subprojects {
         implementation(kotlin("reflect"))
     }
 
+    tasks.withType<Javadoc>().configureEach {
+        enabled = false
+    }
+
     // Loader specific
     if (path != ":common") {
         tasks.withType<JavaCompile> {
             source(project(":common").sourceSets.main.get().allSource)
-        }
-
-        // For now, just skip javadoc
-        tasks.withType<Javadoc>().all {
-            enabled = false
         }
 
         tasks.withType<ProcessResources> {

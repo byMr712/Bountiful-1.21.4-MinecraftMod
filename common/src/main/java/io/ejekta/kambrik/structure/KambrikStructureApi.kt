@@ -36,8 +36,11 @@ class KambrikStructureApi internal constructor() {
             procRegistry.get(OUR_PROCESSOR_LIST_KEY).getOrNull() ?: emptyProcessorList
 
         val poolRegistry = server.registryAccess().lookupOrThrow(Registries.TEMPLATE_POOL)
-        val pool = poolRegistry.get(ResourceKey.create(Registries.TEMPLATE_POOL, poolLocation)).getOrNull()?.value()
-            ?: throw Exception("Cannot add to '$poolLocation' as it cannot be found!")
+        val poolHolder = poolRegistry.get(ResourceKey.create(Registries.TEMPLATE_POOL, poolLocation)).getOrNull()
+        if (poolHolder == null) {
+            return
+        }
+        val pool = poolHolder.value()
 
         val pieceList = (pool as StructurePoolAccessor).elements
         val piece = StructurePoolElement.single(nbtLocation.toString(), ourProcessorList).apply(
